@@ -1,0 +1,12 @@
+model:
+- facenet
+- arcface
+- adaface
+- ghostfacenet
+
+data:
+- eval
+- test
+
+model_name: adaface
+data_path: data/datasets
