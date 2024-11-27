@@ -6,6 +6,10 @@ import argparse
 from tqdm import tqdm
 import os
 import random
+from model import HeadPose
+
+HEAD_POSE = HeadPose()
+
 
 def delete_small_folders(root_folder, min_videos=5):
     root_path = Path(root_folder)
@@ -21,10 +25,10 @@ def delete_small_folders(root_folder, min_videos=5):
                 subfolder.rmdir()  
                 print(f"Deleted folder: {subfolder}")
 
-def create_image_dataset(root_folder, sample, output_folder=None):
+def create_image_dataset(root_folder, sample, output_folder=None, suffix = "_images"):
     root_path = Path(root_folder)
     if output_folder is None:
-        output_folder = root_path.parent / (root_path.name + "_images")
+        output_folder = root_path.parent / (root_path.name + suffix)
     output_path = Path(output_folder)
     output_path.mkdir(exist_ok=True)
 
@@ -44,22 +48,35 @@ def create_image_dataset(root_folder, sample, output_folder=None):
                             ret, frame = cap.read()
                             if not ret:
                                 break
-                            frame_output_path = video_output_path / f"{frame_id}.jpg"
-                            cv2.imwrite(str(frame_output_path), frame)
-                            frame_id += 1
+                            if check_frontal_face(frame):
+                                frame_output_path = video_output_path / f"{frame_id}.jpg"
+                                cv2.imwrite(str(frame_output_path), frame)
+                                frame_id += 1
                     else:
-                        frame_indices = sorted(random.sample(range(total_frames), sample))
+                        frontal_frames = []
                         for idx in range(total_frames):
                             ret, frame = cap.read()
                             if not ret:
                                 break
-                            if idx in frame_indices:
+                            if check_frontal_face(frame):
+                                frontal_frames.append(idx)
+                                
+                        frame_indices = sorted(random.sample(range(len(frontal_frames)), sample)) if len(frontal_frames) > sample else None
+                        frames = [frontal_frames[i] for i in frame_indices] if frame_indices is not None else frontal_frames
+                        for id in frames:
+                            cap.set(cv2.CAP_PROP_POS_FRAMES, id - 1)
+                            ret, frame = cap.read()
+                            if ret:
                                 frame_path =video_output_path / f"{frame_id}.jpg"
                                 cv2.imwrite(frame_path, frame)
-                                print(f"Saved frame {idx} to {frame_path}")
                                 frame_id += 1
-                                if frame_id == sample:
-                                    break
+                        # if idx in frame_indices:
+                        #     frame_path =video_output_path / f"{frame_id}.jpg"
+                        #     cv2.imwrite(frame_path, frame)
+                        #     print(f"Saved frame {idx} to {frame_path}")
+                        #     frame_id += 1
+                        #     if frame_id == sample:
+                        #         break
 
                     cap.release()
     return output_folder
@@ -94,14 +111,20 @@ def to_bgr(folder_path):
                             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                             cv2.imwrite(str(image_path), img)
 
+
+def check_frontal_face(image):
+    yaw, pitch, roll = HEAD_POSE(image)
+    return abs(yaw) < 30 and abs(pitch) < 30 and abs(roll) < 30
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--path", help="path to the image dataset to preprocess")
     parser.add_argument("-m", "--min_videos", help="minimum number of videos to keep a folder", type=int, default=5)
     parser.add_argument("-s", "--sample", help="number of images to sample from the videos", type=int, default=5)
+    parser.add_argument("--suffix", help="suffix_to_folder", type=str, default="_images")
     args = parser.parse_args()
 
     delete_small_folders(args.path, args.min_videos)
-    img_path = create_image_dataset(args.path, args.sample)
+    img_path = create_image_dataset(args.path, args.sample, suffix=args.suffix)
     crop_faces(img_path)
     to_bgr(img_path)

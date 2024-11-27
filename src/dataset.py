@@ -31,7 +31,7 @@ def get_dataset(dataset_name):
     with open('config.yml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     data_path = Path(config['data_path'])
-    dataset_name = dataset_name + "_images"
+    # dataset_name = dataset_name + "_images"
     dataset_dir = data_path / dataset_name
     subfolders = sorted(os.listdir(dataset_dir))
     folder_to_label = {folder: idx for idx, folder in enumerate(subfolders)}

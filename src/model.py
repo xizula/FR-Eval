@@ -11,6 +11,7 @@ import torch
 from ellzaf_ml.models import GhostFaceNetsV2
 # from torchvision.io import read_image
 from numpy.linalg import norm
+from torchvision import transforms
 
 class FaceNet:
     def __init__(self):
@@ -36,7 +37,6 @@ class ArcFace:
     def __call__(self, images):
         emb = []
         for img in images:
-            cv2.imwrite('temp.jpg', (img.detach().cpu().numpy().transpose(1, 2, 0)*255))
             img = img.detach().cpu().numpy().transpose(1, 2, 0)*255
             
             embeddings = self.arcface_model.get_feat(img)
@@ -76,6 +76,56 @@ class GhostFaceNet:
     def compute_similarities(self, e_i, e_j):
         return np.dot(e_i, e_j.T) / (np.linalg.norm(e_i) * np.linalg.norm(e_j))*100
 
+
+class HeadPose:
+    def __init__(self):
+        self.model_paths = ["models/head_pose/fsanet-1x1-iter-688590.onnx", "models/head_pose/fsanet-var-iter-688590.onnx"]
+        self.models = [onnxruntime.InferenceSession(model_path) for model_path in self.model_paths]
+    
+    def __call__(self, image):
+        image = [self.transform(image)]
+        # print(image.shape)
+        yaw_pitch_roll_results = [
+            model.run(["output"], {"input": image})[0] for model in self.models
+        ]
+        # inputs = [{model.get_inputs()[0].name: image} for model in self.models]
+        # yaw_pitch_roll_results = [
+        #     model.run(["output"], {"input": input})[0] for model, input in zip(self.models, inputs)
+        # ]
+        yaw, pitch, roll = np.mean(np.vstack(yaw_pitch_roll_results), axis=0)
+        return yaw, pitch, roll
+    
+    def transform(self, image):
+        trans = transforms.Compose([
+            Resize(64),
+            Normalize(mean=127.5,std=128),
+            ToTensor()
+            ])
+        image = trans(image)
+        return image
+
+class Normalize(object):
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, img):
+        img = (img-self.mean)/self.std
+        return img
+
+class ToTensor(object):
+    def __call__(self, img):
+        img = img.transpose((2, 0, 1))
+
+        return torch.from_numpy(img)
+
+class Resize(object):
+    def __init__(self, size=64):
+        self.size = (size, size)
+
+    def __call__(self, img):
+        img = cv2.resize(img, self.size)
+        return img
 
 def load_model(name: str):
     if name == 'facenet':

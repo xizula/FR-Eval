@@ -16,8 +16,10 @@ import numpy as np
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
-datasets = config['data']
-models = config['model']
+# datasets = config['data']
+# models = config['model']
+models = ['adaface']
+datasets = ["LFW"]
 
 for model_name in tqdm(models):
     for dataset in tqdm(datasets):
