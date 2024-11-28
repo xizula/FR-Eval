@@ -16,10 +16,9 @@ import pickle
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
-# models = config['model']
-# datasets = config['data']
-models = ['adaface']
-datasets = [r"D:\mgr\mgr_data\LFW"]
+models = config['model']
+datasets = config['data']
+
 
 for dataset_name in datasets:
     for model_name in models:
@@ -49,5 +48,4 @@ for dataset_name in datasets:
         embeddings = embeddings.tolist()
         df = {'embedding': embeddings, 'label': labels, 'path': paths}
         embeddings_df = pd.DataFrame(df)
-        dataset_name = "LFW"
         embeddings_df.to_csv(f'data/embeddings/{model_name}_{dataset_name}_embeddings.csv', index=False)
