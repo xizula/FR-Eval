@@ -70,13 +70,6 @@ def create_image_dataset(root_folder, sample, output_folder=None, suffix = "_ima
                                 frame_path =video_output_path / f"{frame_id}.jpg"
                                 cv2.imwrite(frame_path, frame)
                                 frame_id += 1
-                        # if idx in frame_indices:
-                        #     frame_path =video_output_path / f"{frame_id}.jpg"
-                        #     cv2.imwrite(frame_path, frame)
-                        #     print(f"Saved frame {idx} to {frame_path}")
-                        #     frame_id += 1
-                        #     if frame_id == sample:
-                        #         break
 
                     cap.release()
     return output_folder
