@@ -80,7 +80,7 @@ def create_image_dataset(root_folder, sample, output_folder=None, suffix = "_ima
                                 frame_path =video_output_path / f"{frame_id}.jpg"
                                 try:
                                     image = detect_and_preprocess_face(frame)
-                                    image = align_face(image)
+                                    # image = align_face(image)
                                     bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                                     cv2.imwrite(frame_path, bgr_image)
                                     frame_id += 1

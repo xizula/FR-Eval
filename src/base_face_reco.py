@@ -1,6 +1,6 @@
 import os
 import sys
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 print(parent_dir)
 os.environ['PYTHONPATH'] = parent_dir
 sys.path.append(parent_dir)

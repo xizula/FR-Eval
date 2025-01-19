@@ -12,6 +12,7 @@ from ellzaf_ml.models import GhostFaceNetsV2
 # from torchvision.io import read_image
 from numpy.linalg import norm
 from torchvision import transforms
+from models.AdaFace.inference import load_pretrained_model
 
 class FaceNet:
     def __init__(self):
@@ -48,17 +49,20 @@ class ArcFace:
 
 class AdaFace:
     def __init__(self):
-        self.adaface_model = onnxruntime.InferenceSession("models/adaface.onnx")
-        self.input_name = self.adaface_model.get_inputs()[0].name
-        self.output_name = self.adaface_model.get_outputs()[0].name
-    
-    def __call__(self, images):
+        self.model = load_pretrained_model('ir_50')
+        self.model.eval()
+        self.model.cuda()
+
+    def __call__(self, images, train=False):
         images = images.detach().cpu().numpy().transpose(0,2,3,1)
         norm = ((images) - 0.5) / 0.5
-        tensor = norm.transpose(0,3,1,2).astype(np.float32)
-        embeddings = self.adaface_model.run([self.output_name], {self.input_name: tensor})[0]
-
-        return embeddings
+        tensor = torch.tensor(norm.transpose(0,3,1,2)).float()
+        if not train:
+          with torch.no_grad():
+            embeddings, _ = self.model(tensor.cuda())
+        else:
+            embeddings, _ = self.model(tensor.cuda())
+        return embeddings.detach().cpu()
     
     def compute_similarities(self, e_i, e_j):
         return e_i @ e_j.T

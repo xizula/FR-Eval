@@ -1,12 +1,12 @@
 model:
-- facenet
-- arcface
 - adaface
-- ghostfacenet
+# - facenet
+# - arcface
+# - ghostfacenet
 
 data:
-- eval_aligned
-- test_aligned
+- eval_front
+- test_front
 
 model_name: adaface
 data_path: data/datasets
