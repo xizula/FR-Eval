@@ -16,6 +16,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from torchvision.io import read_image
+from torchvision import transforms
 
 
 class HeadPose:
@@ -69,6 +70,11 @@ class Resize(object):
 HEAD_POSE = HeadPose()
 FACE_DETECTOR = MTCNN(image_size=112, margin=20)
 
+def transform(image):
+    trans = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+    return trans(image)
 
 def check_frontal_face(image):
     yaw, pitch, roll = HEAD_POSE(image)
@@ -88,93 +94,18 @@ def select_frontal_frames(frames: list, sample: int=1):
 def detect_and_preprocess_face(image):
     cropped = []
     for img in image:
-        img_cropped = FACE_DETECTOR(img, save_path='test_w.jpg')
-        img_cropped = cv2.imread('test_w.jpg')
-        img_cropped = img_cropped.transpose(2, 0, 1)
-        # print(img_cropped.shape)
-        # print(img_cropped.min(), img_cropped.max())
-        # # print("img cropped")
-        # # # print(img_cropped.shape)
-        # # img_crop = img_cropped.permute(1, 2, 0)
-        
-        # # img_crop = img_crop.numpy()
-        # # print(np.min(img_crop), np.max(img_crop))
-        # # img_crop = img_crop.astype(np.uint8)
-        # # cv2.imwrite('test.jpg', img_crop)
-        # # print("img saved")
+        img_cropped = FACE_DETECTOR(img, save_path='test.jpg')
+        img_cropped = cv2.imread('test.jpg')
+        # os.remove('test.jpg')
+        img_cropped = transform(img_cropped)
         cropped.append(img_cropped)
         if img_cropped is None:
             return None
     if len(cropped) == 0:
         return None
-    # print(len(cropped))
-    # print(cropped[0].shape)
-    return torch.tensor(cropped)
 
+    return torch.stack(cropped)
 
-def align_face(image, target_size=(112, 112)):
-    """
-    Aligns the face by rotating it so the eyes are parallel to the bottom of the image
-    and centers the nose tip in the middle of the image.
-    Args:
-        image: Input image (BGR format).
-        target_size: Tuple indicating the desired output dimensions (width, height).
-    Returns:
-        Aligned image or None if no face is detected.
-    """
-    # Initialize Mediapipe Face Mesh
-    mp_face_mesh = mp.solutions.face_mesh
-
-    with mp_face_mesh.FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True) as face_mesh:
-        # Convert to RGB as Mediapipe works with RGB
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Process the image to detect facial landmarks
-        result = face_mesh.process(rgb_image)
-        if not result.multi_face_landmarks:
-            return None 
-        
-        # Get the landmarks for the first detected face
-        face_landmarks = result.multi_face_landmarks[0]
-        
-        # Extract key points for alignment
-        h, w, _ = image.shape
-        landmarks = [(int(landmark.x * w), int(landmark.y * h)) for landmark in face_landmarks.landmark]
-        left_eye = np.mean([landmarks[33], landmarks[133]], axis=0)  
-        right_eye = np.mean([landmarks[362], landmarks[263]], axis=0)  
-        nose_tip = landmarks[1]  # Nose tip
-        
-        # Step 1: Align the eyes (rotation)
-        delta_y = right_eye[1] - left_eye[1]
-        delta_x = right_eye[0] - left_eye[0]
-        angle = np.degrees(np.arctan2(delta_y, delta_x))
-        eyes_center = ((left_eye[0] + right_eye[0]) // 2, (left_eye[1] + right_eye[1]) // 2)
-        M_rotate = cv2.getRotationMatrix2D(eyes_center, angle, 1.0)
-        rotated_image = cv2.warpAffine(image, M_rotate, (w, h), flags=cv2.INTER_CUBIC)
-        
-        # Update landmarks after rotation
-        landmarks = np.array(landmarks)
-        ones = np.ones((landmarks.shape[0], 1))
-        landmarks_homo = np.hstack([landmarks, ones])
-        rotated_landmarks = M_rotate @ landmarks_homo.T
-        rotated_landmarks = rotated_landmarks.T
-        nose_tip = rotated_landmarks[1]  
-        
-        # Step 2: Center the nose tip (translation)
-        center_x, center_y = target_size[0] // 2, target_size[1] // 2
-        nose_x, nose_y = int(nose_tip[0]), int(nose_tip[1])
-        translation_x = center_x - nose_x
-        translation_y = center_y - nose_y
-        M_translate = np.float32([[1, 0, translation_x], [0, 1, translation_y]])
-        translated_image = cv2.warpAffine(rotated_image, M_translate, target_size, flags=cv2.INTER_CUBIC)
-        
-        return translated_image
-
-
-def crop_faces(images: np.ndarray):
-    imgs = detect_and_preprocess_face(images)
-    return torch.tensor(imgs)
-  
 
 
 def process_video(video: Union[str, Path], length: int=4, step: int=1, num_frames: int=1, crop: bool=True):
