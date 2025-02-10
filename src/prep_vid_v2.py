@@ -69,12 +69,15 @@ class Resize(object):
 
 HEAD_POSE = HeadPose()
 FACE_DETECTOR = MTCNN(image_size=112, margin=20)
+TRANSFORM = transforms.Compose([
+    transforms.Lambda(lambda x: x.float())
+])
 
-def transform(image):
-    trans = transforms.Compose([
-            transforms.ToTensor(),
-        ])
-    return trans(image)
+# def transform(image):
+#     trans = transforms.Compose([
+#             transforms.ToTensor(),
+#         ])
+#     return trans(image)
 
 def check_frontal_face(image):
     yaw, pitch, roll = HEAD_POSE(image)
@@ -95,9 +98,8 @@ def detect_and_preprocess_face(image):
     cropped = []
     for img in image:
         img_cropped = FACE_DETECTOR(img, save_path='test.jpg')
-        img_cropped = cv2.imread('test.jpg')
-        # os.remove('test.jpg')
-        img_cropped = transform(img_cropped)
+        img_cropped = TRANSFORM(img_cropped)
+        img_cropped = img_cropped / 255.0
         cropped.append(img_cropped)
         if img_cropped is None:
             return None
