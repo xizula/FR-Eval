@@ -1,8 +1,7 @@
 model:
 - adaface
-# - facenet
-# - arcface
-# - ghostfacenet
+- facenet
+- arcface
 
 data:
 - eval_front

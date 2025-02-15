@@ -111,7 +111,7 @@ def check_frontal_face(image):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--path", help="path to the image dataset to preprocess")
+    parser.add_argument("-p", "--path", help="path to the video dataset to preprocess")
     parser.add_argument("-m", "--min_videos", help="minimum number of videos to keep a folder", type=int, default=5)
     parser.add_argument("-s", "--sample", help="number of images to sample from the videos", type=int, default=5)
     parser.add_argument("--suffix", help="suffix_to_folder", type=str, default="_images")

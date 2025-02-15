@@ -30,8 +30,3 @@ def delete_short_videos(root_folder, min_duration=4):
                 except Exception as e:
                     print(f"Nie udało się przetworzyć pliku {file_path}: {e}")
 
-# Ścieżka do folderu głównego
-folder = "data/datasets/train"
-
-# Usuń filmy krótsze niż 4 sekundy
-delete_short_videos(folder, min_duration=4)

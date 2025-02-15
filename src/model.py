@@ -88,14 +88,10 @@ class HeadPose:
     
     def __call__(self, image):
         image = [self.transform(image)]
-        # print(image.shape)
         yaw_pitch_roll_results = [
             model.run(["output"], {"input": image})[0] for model in self.models
         ]
-        # inputs = [{model.get_inputs()[0].name: image} for model in self.models]
-        # yaw_pitch_roll_results = [
-        #     model.run(["output"], {"input": input})[0] for model, input in zip(self.models, inputs)
-        # ]
+
         yaw, pitch, roll = np.mean(np.vstack(yaw_pitch_roll_results), axis=0)
         return yaw, pitch, roll
     

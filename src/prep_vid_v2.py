@@ -73,11 +73,6 @@ TRANSFORM = transforms.Compose([
     transforms.Lambda(lambda x: x.float())
 ])
 
-# def transform(image):
-#     trans = transforms.Compose([
-#             transforms.ToTensor(),
-#         ])
-#     return trans(image)
 
 def check_frontal_face(image):
     yaw, pitch, roll = HEAD_POSE(image)
@@ -97,7 +92,7 @@ def select_frontal_frames(frames: list, sample: int=1):
 def detect_and_preprocess_face(image):
     cropped = []
     for img in image:
-        img_cropped = FACE_DETECTOR(img, save_path='test.jpg')
+        img_cropped = FACE_DETECTOR(img)
         img_cropped = TRANSFORM(img_cropped)
         img_cropped = img_cropped / 255.0
         cropped.append(img_cropped)
