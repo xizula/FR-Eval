@@ -5,7 +5,7 @@ os.environ['PYTHONPATH'] = parent_dir
 sys.path.append(parent_dir)
 
 from model import load_model
-from prep_vid_v2 import get_images_tensor
+from prep_vid_quality import get_images_tensor
 from pathlib import Path
 import torch
 import pandas as pd
@@ -33,6 +33,6 @@ for video in tqdm(videos):
         data['path'].append(video.as_posix())
 
 df = pd.DataFrame(data)
-df.to_parquet(f'data/demo/swan_random.parquet')
+df.to_parquet(f'data/demo/swan_sdd_mod.parquet')
 
 

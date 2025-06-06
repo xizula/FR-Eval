@@ -1,3 +1,9 @@
+import os
+import sys
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+os.environ['PYTHONPATH'] = parent_dir
+sys.path.append(parent_dir)
+
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from insightface.model_zoo import get_model
 import torch
@@ -50,7 +56,7 @@ class ArcFace:
 
 class AdaFace:
     def __init__(self):
-        self.model = load_pretrained_model('ir_50')
+        self.model = load_pretrained_model('ir_101')
         self.model.eval()
         self.model.cuda()
 
@@ -187,8 +193,11 @@ def load_quality_model(name: str, **kwargs):
     
 def load_quality_method(name: str):
     name = name.lower()
-    model = load_quality_model('adaface')
-    checkpoint = torch.load(f'models/quality/adaface_{name}.pth')
+    model = QualityAdaFace()
+    ckpt_path = f'models/quality/adaface_{name}.pth'
+    if not os.path.exists(ckpt_path):
+        raise FileNotFoundError(f"Checkpoint file {ckpt_path} does not exist.")
+    checkpoint = torch.load(ckpt_path)
     model.load_state_dict(checkpoint)
     model.eval()
     return model
