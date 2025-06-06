@@ -13,7 +13,6 @@ from torchvision import transforms
 from typing import Union
 import matplotlib.pyplot as plt
 import cv2
-import mediapipe as mp
 import numpy as np
 from torchvision.io import read_image
 from torchvision import transforms
@@ -21,7 +20,7 @@ from torchvision import transforms
 
 class HeadPose:
     def __init__(self):
-        self.model_paths = ["models/head_pose/fsanet-1x1-iter-688590.onnx", "models/head_pose/fsanet-var-iter-688590.onnx"]
+        self.model_paths = [r"D:\Projekt\models\head_pose\fsanet-1x1-iter-688590.onnx", r"D:\Projekt\models\head_pose\fsanet-var-iter-688590.onnx"]
         self.models = [onnxruntime.InferenceSession(model_path) for model_path in self.model_paths]
     
     def __call__(self, image):
@@ -69,9 +68,10 @@ class Resize(object):
 
 HEAD_POSE = HeadPose()
 FACE_DETECTOR = MTCNN(image_size=112, margin=20)
-TRANSFORM = transforms.Compose([
-    transforms.Lambda(lambda x: x.float())
-])
+# TRANSFORM = transforms.Compose([
+#     transforms.Lambda(lambda x: x.float())
+# ])
+TRANSFORM = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 
 
 def check_frontal_face(image):
@@ -92,9 +92,13 @@ def select_frontal_frames(frames: list, sample: int=1):
 def detect_and_preprocess_face(image):
     cropped = []
     for img in image:
+        frame_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
         img_cropped = FACE_DETECTOR(img)
+        if img_cropped is None:
+            continue
         img_cropped = TRANSFORM(img_cropped)
-        img_cropped = img_cropped / 255.0
+        # img_cropped = img_cropped / 255.0
         cropped.append(img_cropped)
         if img_cropped is None:
             return None
@@ -132,7 +136,7 @@ def process_video(video: Union[str, Path], length: int=4, step: int=1, num_frame
             return None
         images.extend(frontal_face)
     if crop:
-        images = detect_and_preprocess_face(np.array(images))
+        images = detect_and_preprocess_face(images)
         if images is None:
             return None
     
@@ -143,7 +147,7 @@ def process_video(video: Union[str, Path], length: int=4, step: int=1, num_frame
 
     
 def get_images_tensor(video: Union[str, Path, cv2.VideoCapture], length: int=4, step: int=1, num_frames: int=1, crop: bool=True):
-    if  isinstance(video, (str,Path)):
+    if isinstance(video, (str,Path)):
         video = cv2.VideoCapture(str(video))
     images = process_video(video, length, step, num_frames, crop)
     return images

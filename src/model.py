@@ -13,6 +13,7 @@ from ellzaf_ml.models import GhostFaceNetsV2
 from numpy.linalg import norm
 from torchvision import transforms
 from models.AdaFace.inference import load_pretrained_model
+from torch import nn
 
 class FaceNet:
     def __init__(self):
@@ -54,14 +55,14 @@ class AdaFace:
         self.model.cuda()
 
     def __call__(self, images, train=False):
-        images = images.detach().cpu().numpy().transpose(0,2,3,1)
-        norm = ((images) - 0.5) / 0.5
-        tensor = torch.tensor(norm.transpose(0,3,1,2)).float()
+        # images = images.detach().cpu().numpy().transpose(0,2,3,1)
+        # norm = ((images) - 0.5) / 0.5
+        # tensor = torch.tensor(norm.transpose(0,3,1,2)).float()
         if not train:
           with torch.no_grad():
-            embeddings, _ = self.model(tensor.cuda())
+            embeddings, _ = self.model(images.cuda())
         else:
-            embeddings, _ = self.model(tensor.cuda())
+            embeddings, _ = self.model(images.cuda())
         return embeddings.detach().cpu()
     
     def compute_similarities(self, e_i, e_j):
@@ -139,3 +140,55 @@ def load_model(name: str):
     else:
         raise ValueError(f'Model {name} not supported')
 
+
+class QualityFaceNet(nn.Module):
+    def __init__(self):
+        super(QualityFaceNet, self).__init__()
+        self.model = load_model('facenet')
+        self.features = nn.Sequential(*list(self.model.model.children())[:-4]).cuda()
+        self.dropout = nn.Dropout(p=0.5).cuda()
+        self.fc = nn.Linear(1792, 1).cuda()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)  # Flatten before the fully connected layer
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+    
+
+class QualityAdaFace(nn.Module):
+    def __init__(self, **kwargs):
+        super(QualityAdaFace, self).__init__()
+        original_model = load_model('adaface', **kwargs)
+        self.input_layer = original_model.model.input_layer
+        self.body = original_model.model.body
+        
+        # Add new layers: dropout and a fully connected layer
+        self.dropout = nn.Dropout(p=0.5)
+        self.fc = nn.Linear(512, 1).cuda()  # Assuming 512 features from the body
+        
+    def forward(self, x):
+        x = self.input_layer(x)
+        x = self.body(x)
+        x = x.mean(dim=(2, 3))  # Global average pooling
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+    
+
+def load_quality_model(name: str, **kwargs):
+    if name == 'facenet':
+        return QualityFaceNet()
+    elif name == 'adaface':
+        return QualityAdaFace(**kwargs)
+    else:
+        raise ValueError(f'Quality model {name} not supported')
+    
+def load_quality_method(name: str):
+    name = name.lower()
+    model = load_quality_model('adaface')
+    checkpoint = torch.load(f'models/quality/adaface_{name}.pth')
+    model.load_state_dict(checkpoint)
+    model.eval()
+    return model
